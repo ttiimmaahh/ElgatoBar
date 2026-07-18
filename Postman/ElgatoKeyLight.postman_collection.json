@@ -1,0 +1,430 @@
+{
+  "info": {
+    "_postman_id": "elgato-key-light-api",
+    "name": "Elgato Key Light API",
+    "description": "API collection for controlling Elgato Key Lights and Ring Lights.\n\nSet the `light_ip` variable to your light's IP address before making requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "light_ip",
+      "value": "192.168.1.100",
+      "type": "string"
+    },
+    {
+      "key": "port",
+      "value": "9123",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Discovery & Info",
+      "item": [
+        {
+          "name": "Get Light State",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://{{light_ip}}:{{port}}/elgato/lights",
+              "protocol": "http",
+              "host": ["{{light_ip}}"],
+              "port": "{{port}}",
+              "path": ["elgato", "lights"]
+            },
+            "description": "Get the current state of the light including on/off, brightness, and temperature."
+          }
+        },
+        {
+          "name": "Get Accessory Info",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://{{light_ip}}:{{port}}/elgato/accessory-info",
+              "protocol": "http",
+              "host": ["{{light_ip}}"],
+              "port": "{{port}}",
+              "path": ["elgato", "accessory-info"]
+            },
+            "description": "Get device information including product name, firmware version, serial number, and WiFi info."
+          }
+        },
+        {
+          "name": "Get Settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://{{light_ip}}:{{port}}/elgato/settings",
+              "protocol": "http",
+              "host": ["{{light_ip}}"],
+              "port": "{{port}}",
+              "path": ["elgato", "settings"]
+            },
+            "description": "Get device settings and behavior configuration."
+          }
+        },
+        {
+          "name": "Identify Light",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://{{light_ip}}:{{port}}/elgato/identify",
+              "protocol": "http",
+              "host": ["{{light_ip}}"],
+              "port": "{{port}}",
+              "path": ["elgato", "identify"]
+            },
+            "description": "Flash the light a few times to identify it physically."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Power Control",
+      "item": [
+        {
+          "name": "Turn Light On",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lights\": [\n    {\n      \"on\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://{{light_ip}}:{{port}}/elgato/lights",
+              "protocol": "http",
+              "host": ["{{light_ip}}"],
+              "port": "{{port}}",
+              "path": ["elgato", "lights"]
+            },
+            "description": "Turn the light on (maintains current brightness and temperature)."
+          }
+        },
+        {
+          "name": "Turn Light Off",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lights\": [\n    {\n      \"on\": 0\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://{{light_ip}}:{{port}}/elgato/lights",
+              "protocol": "http",
+              "host": ["{{light_ip}}"],
+              "port": "{{port}}",
+              "path": ["elgato", "lights"]
+            },
+            "description": "Turn the light off."
+          }
+        },
+        {
+          "name": "Turn On - Full Brightness",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lights\": [\n    {\n      \"on\": 1,\n      \"brightness\": 100,\n      \"temperature\": 200\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://{{light_ip}}:{{port}}/elgato/lights",
+              "protocol": "http",
+              "host": ["{{light_ip}}"],
+              "port": "{{port}}",
+              "path": ["elgato", "lights"]
+            },
+            "description": "Turn on at 100% brightness with neutral color temperature (~5000K)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Brightness Control",
+      "item": [
+        {
+          "name": "Set Brightness 25%",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lights\": [\n    {\n      \"brightness\": 25\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://{{light_ip}}:{{port}}/elgato/lights",
+              "protocol": "http",
+              "host": ["{{light_ip}}"],
+              "port": "{{port}}",
+              "path": ["elgato", "lights"]
+            }
+          }
+        },
+        {
+          "name": "Set Brightness 50%",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lights\": [\n    {\n      \"brightness\": 50\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://{{light_ip}}:{{port}}/elgato/lights",
+              "protocol": "http",
+              "host": ["{{light_ip}}"],
+              "port": "{{port}}",
+              "path": ["elgato", "lights"]
+            }
+          }
+        },
+        {
+          "name": "Set Brightness 75%",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lights\": [\n    {\n      \"brightness\": 75\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://{{light_ip}}:{{port}}/elgato/lights",
+              "protocol": "http",
+              "host": ["{{light_ip}}"],
+              "port": "{{port}}",
+              "path": ["elgato", "lights"]
+            }
+          }
+        },
+        {
+          "name": "Set Brightness 100%",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lights\": [\n    {\n      \"brightness\": 100\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://{{light_ip}}:{{port}}/elgato/lights",
+              "protocol": "http",
+              "host": ["{{light_ip}}"],
+              "port": "{{port}}",
+              "path": ["elgato", "lights"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Temperature Control",
+      "item": [
+        {
+          "name": "Set Temperature Warm (2900K)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lights\": [\n    {\n      \"temperature\": 344\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://{{light_ip}}:{{port}}/elgato/lights",
+              "protocol": "http",
+              "host": ["{{light_ip}}"],
+              "port": "{{port}}",
+              "path": ["elgato", "lights"]
+            },
+            "description": "Set color temperature to warm (2900K). Temperature value 344 = warmest."
+          }
+        },
+        {
+          "name": "Set Temperature Neutral (5000K)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lights\": [\n    {\n      \"temperature\": 200\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://{{light_ip}}:{{port}}/elgato/lights",
+              "protocol": "http",
+              "host": ["{{light_ip}}"],
+              "port": "{{port}}",
+              "path": ["elgato", "lights"]
+            },
+            "description": "Set color temperature to neutral daylight (~5000K)."
+          }
+        },
+        {
+          "name": "Set Temperature Cool (7000K)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lights\": [\n    {\n      \"temperature\": 143\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://{{light_ip}}:{{port}}/elgato/lights",
+              "protocol": "http",
+              "host": ["{{light_ip}}"],
+              "port": "{{port}}",
+              "path": ["elgato", "lights"]
+            },
+            "description": "Set color temperature to cool/blue (7000K). Temperature value 143 = coolest."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Presets",
+      "item": [
+        {
+          "name": "Meeting Mode",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lights\": [\n    {\n      \"on\": 1,\n      \"brightness\": 50,\n      \"temperature\": 230\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://{{light_ip}}:{{port}}/elgato/lights",
+              "protocol": "http",
+              "host": ["{{light_ip}}"],
+              "port": "{{port}}",
+              "path": ["elgato", "lights"]
+            },
+            "description": "Good for video calls: 50% brightness, neutral-warm temperature (~4350K)."
+          }
+        },
+        {
+          "name": "Streaming Mode",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lights\": [\n    {\n      \"on\": 1,\n      \"brightness\": 75,\n      \"temperature\": 200\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://{{light_ip}}:{{port}}/elgato/lights",
+              "protocol": "http",
+              "host": ["{{light_ip}}"],
+              "port": "{{port}}",
+              "path": ["elgato", "lights"]
+            },
+            "description": "Good for streaming: 75% brightness, neutral daylight (~5000K)."
+          }
+        },
+        {
+          "name": "Low Light / Evening",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lights\": [\n    {\n      \"on\": 1,\n      \"brightness\": 20,\n      \"temperature\": 320\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://{{light_ip}}:{{port}}/elgato/lights",
+              "protocol": "http",
+              "host": ["{{light_ip}}"],
+              "port": "{{port}}",
+              "path": ["elgato", "lights"]
+            },
+            "description": "Low ambient light: 20% brightness, warm temperature (~3125K)."
+          }
+        }
+      ]
+    }
+  ]
+}

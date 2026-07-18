@@ -2,31 +2,26 @@
 //  ElgatoBarApp.swift
 //  ElgatoBar
 //
-//  Created by ttiimmaahh on 1/1/26.
+//  Elgato Key Light controller menu bar app
 //
 
 import SwiftUI
-import SwiftData
 
 @main
 struct ElgatoBarApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
+    @State private var state = AppState()
 
     var body: some Scene {
-        WindowGroup {
-            ContentView()
+        MenuBarExtra {
+            MenuBarView(state: state)
+        } label: {
+            Image("MenuBarIcon")
         }
-        .modelContainer(sharedModelContainer)
+        .menuBarExtraStyle(.window)
+
+        Window("ElgatoBar Settings", id: "settings") {
+            SettingsView(state: state)
+        }
+        .windowResizability(.contentSize)
     }
 }
