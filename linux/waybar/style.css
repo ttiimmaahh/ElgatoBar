@@ -1,0 +1,23 @@
+#custom-elgatobar {
+  padding: 0 10px;
+}
+
+#custom-elgatobar.on {
+  color: #f9c74f;
+}
+
+#custom-elgatobar.mixed,
+#custom-elgatobar.partial-offline {
+  color: #f8961e;
+}
+
+#custom-elgatobar.off,
+#custom-elgatobar.unconfigured {
+  color: #a0a0a0;
+}
+
+#custom-elgatobar.offline,
+#custom-elgatobar.unavailable,
+#custom-elgatobar.stale {
+  color: #f94144;
+}

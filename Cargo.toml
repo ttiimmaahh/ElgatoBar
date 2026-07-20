@@ -5,6 +5,7 @@ members = [
     "linux/crates/elgatobar-cli",
     "linux/crates/elgatobar-daemon",
     "linux/crates/elgatobar-ui",
+    "linux/crates/elgatobar-waybar",
 ]
 resolver = "2"
 

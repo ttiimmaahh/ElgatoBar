@@ -451,6 +451,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "elgatobar-waybar"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "elgatobar-dbus",
+ "futures-util",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "zbus",
+]
+
+[[package]]
 name = "email_address"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"

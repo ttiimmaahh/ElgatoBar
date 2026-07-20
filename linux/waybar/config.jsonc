@@ -1,0 +1,17 @@
+{
+  "layer": "top",
+  "position": "top",
+  "height": 30,
+  "modules-left": ["custom/elgatobar"],
+  "custom/elgatobar": {
+    "exec": "elgatobar-waybar",
+    "return-type": "json",
+    "restart-interval": 5,
+    "exec-on-event": false,
+    "escape": true,
+    "tooltip": true,
+    "on-click": "elgatobar-waybar toggle-all",
+    "on-click-middle": "elgatobar-waybar refresh-all",
+    "on-click-right": "elgatobar-ui"
+  }
+}
