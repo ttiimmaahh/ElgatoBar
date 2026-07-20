@@ -2,11 +2,23 @@
 
 The Linux edition provides a portable Rust control core, a persistent multi-device user-session daemon, a typed D-Bus interface, the `elgatobar` client CLI, a compact GTK4/libadwaita control application, and a stateful Waybar custom module. The daemon is the only shipped Linux process that polls or writes lights. CLI, GTK, and Waybar clients require D-Bus and never silently fall back to direct device HTTP.
 
-Discovery, network scanning, scenes, global shortcuts, and packaging remain later milestones. Devices are added explicitly by endpoint.
+Discovery, network scanning, scenes, global shortcuts, and packaging remain later milestones. Devices are added explicitly by endpoint. The Linux discovery approach is documented in [`docs/mdns-discovery.md`](docs/mdns-discovery.md).
+
+## Test drive
+
+From the repository root, run:
+
+```bash
+./linux/run-elgatobar
+```
+
+The launcher builds the required debug binaries, reuses an already-running daemon or starts one for the lifetime of the GTK application, and opens the controls. On first launch, select **Add Light** and enter each light's hostname or IP address; the default Elgato port is supplied automatically. Configuration uses the normal XDG locations and is retained for the next run. Pass `--release` when testing optimized binaries.
+
+This launcher is for development and hands-on testing. Installed builds continue to use the user-level systemd service so closing the graphical application never owns or stops the persistent daemon.
 
 ## Build and test
 
-Install Rust plus the GTK4 and libadwaita development packages. The UI currently targets gtk-rs GTK 4.22-compatible bindings and libadwaita 1.5 APIs; on Arch Linux the system packages are `gtk4` and `libadwaita`, while Debian-family systems commonly name the development packages `libgtk-4-dev` and `libadwaita-1-dev`. Verify discovery with:
+Install Rust plus the GTK4 and libadwaita development packages. The UI currently targets gtk-rs GTK 4.22-compatible bindings and libadwaita 1.5 APIs; on Arch Linux the system packages are `gtk4` and `libadwaita`, while Debian-family systems commonly name the development packages `libgtk-4-dev` and `libadwaita-1-dev`. Verify the native dependencies with:
 
 ```bash
 pkg-config --modversion gtk4 libadwaita-1

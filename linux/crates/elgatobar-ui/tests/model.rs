@@ -42,7 +42,12 @@ fn maps_all_top_level_inventory_states() {
     let mut unavailable = Controller::loading();
     unavailable.connection(ConnectionState::Unavailable("missing".into()));
     assert_eq!(unavailable.model().state, InventoryState::Unavailable);
-    assert_eq!(state(vec![]).1.state, InventoryState::Unconfigured);
+    let unconfigured = state(vec![]).1;
+    assert_eq!(unconfigured.state, InventoryState::Unconfigured);
+    assert_eq!(
+        unconfigured.summary,
+        "Add a light by hostname or IP address to start testing."
+    );
     assert_eq!(
         state(vec![
             device("a", true, true, true, 50, 250),

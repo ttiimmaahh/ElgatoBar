@@ -209,7 +209,9 @@ impl Controller {
             (InventoryState::Unavailable, ConnectionState::Unavailable(e)) => {
                 format!("Daemon unavailable: {e}")
             }
-            (InventoryState::Unconfigured, _) => "No lights are configured.".into(),
+            (InventoryState::Unconfigured, _) => {
+                "Add a light by hostname or IP address to start testing.".into()
+            }
             (InventoryState::PartialOffline, _) => {
                 "Some lights are offline; cached values are retained.".into()
             }

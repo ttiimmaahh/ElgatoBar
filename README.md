@@ -31,7 +31,15 @@ Or open `ElgatoBar.xcodeproj` in Xcode and run the `ElgatoBar` scheme.
 
 ### Linux edition
 
-The repository also contains an incremental Rust workspace for the Linux edition. It currently provides the portable control core, a user-session daemon, a versioned D-Bus API, and the `elgatobar` client CLI without moving or changing the macOS project. See [`linux/README.md`](linux/README.md) for commands, scope, validation, and security notes; shared protocol fixtures and the versioned interchange schema live under [`shared/`](shared/).
+The repository also contains an incremental Rust workspace for the Linux edition. To build the daemon and open the GTK controls in one step, run:
+
+```bash
+./linux/run-elgatobar
+```
+
+Select **Add Light** and enter a light hostname or IP address on first launch. See [`linux/README.md`](linux/README.md) for current scope, installed-service setup, validation, and security notes; shared protocol fixtures and the versioned interchange schema live under [`shared/`](shared/).
+
+The proposed platform-first monorepo organization is recorded in [`docs/architecture/repository-layout.md`](docs/architecture/repository-layout.md). Moving the Xcode and Cargo projects will be a separate mechanical change gated independently on macOS and Linux.
 
 > **Note:** Code signing is set to *Automatic* with no development team baked in.
 > Open the project in Xcode and select your own team under

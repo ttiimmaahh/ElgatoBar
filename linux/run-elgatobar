@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+usage() {
+  cat <<'EOF'
+Run the Linux ElgatoBar daemon and GTK application from this checkout.
+
+Usage: ./linux/run-elgatobar [--release]
+
+The launcher builds the Linux binaries, reuses an existing daemon when one is
+available, or starts a development daemon for the lifetime of the GTK app.
+Configured lights use the normal XDG data locations and remain available on
+the next run.
+EOF
+}
+
+profile="debug"
+case "${1:-}" in
+  "") ;;
+  --release) profile="release" ;;
+  -h|--help)
+    usage
+    exit 0
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd -- "$script_dir/.." && pwd)"
+cd "$repo_root"
+
+build_args=(
+  --quiet
+  -p elgatobar-cli
+  -p elgatobar-daemon
+  -p elgatobar-ui
+)
+if [[ "$profile" == "release" ]]; then
+  build_args+=(--release)
+fi
+
+echo "Building ElgatoBar ($profile)…"
+cargo build "${build_args[@]}"
+
+bin_dir="$repo_root/target/$profile"
+cli="$bin_dir/elgatobar"
+daemon="$bin_dir/elgatobar-daemon"
+ui="$bin_dir/elgatobar-ui"
+daemon_pid=""
+
+cleanup() {
+  if [[ -n "$daemon_pid" ]] && kill -0 "$daemon_pid" 2>/dev/null; then
+    kill -TERM "$daemon_pid" 2>/dev/null || true
+    wait "$daemon_pid" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT TERM
+
+if "$cli" devices list >/dev/null 2>&1; then
+  echo "Using the running ElgatoBar daemon."
+else
+  echo "Starting the ElgatoBar daemon…"
+  "$daemon" &
+  daemon_pid=$!
+
+  ready=false
+  for _ in {1..100}; do
+    if "$cli" devices list >/dev/null 2>&1; then
+      ready=true
+      break
+    fi
+    if ! kill -0 "$daemon_pid" 2>/dev/null; then
+      wait "$daemon_pid"
+      echo "The ElgatoBar daemon stopped before it became ready." >&2
+      exit 3
+    fi
+    sleep 0.1
+  done
+  if [[ "$ready" != true ]]; then
+    echo "The ElgatoBar daemon did not become ready within 10 seconds." >&2
+    exit 3
+  fi
+fi
+
+echo "Opening ElgatoBar. Add each light by hostname or IP address in the app."
+"$ui"

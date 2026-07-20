@@ -481,13 +481,13 @@ fn add_dialog(ui: &Rc<Ui>) {
     content.set_margin_start(18);
     content.set_margin_end(18);
     let description = gtk::Label::new(Some(
-        "Enter a hostname, IP address, or endpoint. The daemon validates the light before saving it.",
+        "Enter the light's hostname or IP address. Port 9123 is used automatically unless you provide another port. The daemon validates the light before saving it.",
     ));
     description.set_wrap(true);
     description.set_xalign(0.0);
     content.append(&description);
     let entry = gtk::Entry::builder()
-        .placeholder_text("key-light.local")
+        .placeholder_text("192.168.1.50 or key-light.local")
         .activates_default(true)
         .build();
     content.append(&entry);
