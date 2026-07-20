@@ -632,6 +632,34 @@ impl DeviceIdentity {
     pub fn can_follow_endpoint_change(&self) -> bool {
         !matches!(self.0, DeviceIdentityValue::InstallationLocal { .. })
     }
+
+    /// Returns the stable, lossless selector used by Linux D-Bus and CLI clients.
+    #[must_use]
+    pub fn canonical_id(&self) -> String {
+        match &self.0 {
+            DeviceIdentityValue::Serial { serial } => format!("serial/{}", hex(serial)),
+            DeviceIdentityValue::Mdns {
+                instance,
+                product_name,
+                hardware_board_type,
+            } => format!(
+                "mdns/{}/{}/{hardware_board_type}",
+                hex(instance),
+                hex(product_name)
+            ),
+            DeviceIdentityValue::InstallationLocal { id, .. } => format!("local/{id}"),
+        }
+    }
+}
+
+fn hex(value: &str) -> String {
+    const DIGITS: &[u8; 16] = b"0123456789abcdef";
+    let mut encoded = String::with_capacity(value.len() * 2);
+    for byte in value.bytes() {
+        encoded.push(char::from(DIGITS[usize::from(byte >> 4)]));
+        encoded.push(char::from(DIGITS[usize::from(byte & 0x0f)]));
+    }
+    encoded
 }
 
 pub(crate) fn deserialize_canonical_uuid<'de, D>(deserializer: D) -> Result<Uuid, D::Error>

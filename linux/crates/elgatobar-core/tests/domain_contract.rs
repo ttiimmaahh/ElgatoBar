@@ -467,6 +467,22 @@ fn interchange_schema() -> Value {
     .unwrap()
 }
 
+#[test]
+fn all_published_json_schemas_are_valid_draft_2020_12_documents() {
+    for name in [
+        "elgatobar-interchange-v1.schema.json",
+        "elgatobar-linux-devices-v1.schema.json",
+        "elgatobar-linux-settings-v1.schema.json",
+    ] {
+        let schema: Value = serde_json::from_str(
+            &fs::read_to_string(fixture_path(&format!("schemas/{name}"))).unwrap(),
+        )
+        .unwrap();
+        jsonschema::meta::validate(&schema)
+            .unwrap_or_else(|error| panic!("{name} is not a valid JSON Schema: {error}"));
+    }
+}
+
 fn interchange_fixture() -> Value {
     serde_json::from_str(
         &fs::read_to_string(fixture_path("api-fixtures/interchange-v1.json")).unwrap(),

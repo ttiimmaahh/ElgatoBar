@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ttiimmaahh/ElgatoBar/shared/schemas/elgatobar-linux-settings-v1.schema.json",
+  "title": "ElgatoBar Linux settings v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "refreshIntervalSeconds"],
+  "properties": {
+    "version": { "const": 1 },
+    "refreshIntervalSeconds": { "enum": [3, 5, 10, 30] }
+  }
+}

@@ -1,8 +1,8 @@
 # ElgatoBar for Linux
 
-The current Linux edition provides a portable Rust control core, a user-session daemon, a versioned D-Bus API, and the `elgatobar` client CLI. This daemon foundation intentionally manages one manually configured endpoint. Discovery, scanning, persistence, scenes, aggregate commands, GTK, and Waybar remain later milestones.
+The Linux edition provides a portable Rust control core, a persistent multi-device user-session daemon, a typed D-Bus interface, and the `elgatobar` client CLI. The daemon is the only shipped Linux process that polls or writes lights. CLI, future GTK, and future Waybar clients require D-Bus and never silently fall back to direct device HTTP.
 
-The daemon is now the only shipped Linux component that polls or writes a light. The CLI requires D-Bus and never silently falls back to direct HTTP.
+Discovery, network scanning, scenes, GTK, and Waybar remain later milestones. Devices are added explicitly by endpoint.
 
 ## Build and test
 
@@ -13,50 +13,76 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
 ```
 
-The D-Bus integration tests create isolated session buses with `dbus-run-session` and exercise the daemon, public methods, state snapshots, signals, and CLI process boundary without physical hardware.
+The integration tests create isolated session buses and temporary XDG roots. They exercise persistence across daemon restarts, D-Bus methods and signals, CLI process behavior, retry/offline rules, aggregates, and partial failure without physical hardware.
 
-## Run from the workspace
+## Storage and first-device setup
 
-Start the daemon in a graphical login session, replacing the endpoint with your light:
+The daemon starts without an endpoint argument and creates default settings on first run. It follows XDG overrides:
+
+- devices: `$XDG_DATA_HOME/elgatobar/devices-v1.json`, falling back to `~/.local/share/elgatobar/devices-v1.json`;
+- settings: `$XDG_CONFIG_HOME/elgatobar/settings-v1.json`, falling back to `~/.config/elgatobar/settings-v1.json`.
+
+Both JSON documents are versioned and atomically replaced. The settings file supports `refreshIntervalSeconds` values `3`, `5`, `10`, and `30`; the default is `5`. Unknown future versions stop daemon startup without rewriting the document. See [`../shared/protocol/elgatobar-linux-storage-v1.md`](../shared/protocol/elgatobar-linux-storage-v1.md).
+
+Start the daemon in a graphical login session, then add the first light from another terminal on the same user bus:
 
 ```bash
-cargo run -p elgatobar-daemon -- --endpoint key-light.local
+cargo run -p elgatobar-daemon
+cargo run -p elgatobar-cli -- devices add key-light.local
 ```
 
-Then use the client from another terminal in the same user session:
+Adding validates both accessory-info and light-state before persistence. A serial-backed identity can retain its stable ID when its endpoint changes. An installation-local identity cannot silently move; remove the old local configuration and explicitly add the confirmed new endpoint.
+
+## Multi-device CLI
+
+Stable IDs are printed by `devices list` and are the selectors for device-specific operations:
 
 ```bash
-cargo run -p elgatobar-cli -- info
-cargo run -p elgatobar-cli -- state
-cargo run -p elgatobar-cli -- refresh
-cargo run -p elgatobar-cli -- set --on --brightness 75 --kelvin 5000
-cargo run -p elgatobar-cli -- toggle
-cargo run -p elgatobar-cli -- identify
-cargo run -p elgatobar-cli -- --json state
+elgatobar devices list
+elgatobar devices add key-light.local
+elgatobar devices remove 'serial/…'
+elgatobar state
+elgatobar state 'serial/…'
+elgatobar refresh
+elgatobar refresh 'serial/…'
+elgatobar set 'serial/…' --on --brightness 75 --kelvin 5000
+elgatobar toggle 'serial/…'
+elgatobar toggle-all
+elgatobar identify 'serial/…'
+elgatobar --json devices list
 ```
 
-`state` returns the daemon's cached snapshot; `refresh` performs an immediate device poll. The daemon otherwise polls every five seconds. CLI exit statuses are `0` for success, `2` for invalid arguments/domain values, `3` for daemon or device connectivity failure, and `4` for HTTP/protocol/response failure.
+`state` reads cache only. `refresh` polls all devices and returns one result per configured device. The daemon polls concurrently with at most eight device requests in flight, retries once after 500 ms, and marks a previously online device offline after two failed refresh cycles while retaining last-known power, brightness, and native temperature.
+
+`toggle-all` skips offline devices. If any online light is on, it targets every online light off; otherwise it targets them all on. Results identify successes, failures, and skipped offline targets independently. There is no transactional hardware rollback after a partial network failure.
+
+CLI exit statuses are:
+
+| Status | Meaning |
+| --- | --- |
+| `0` | Full success |
+| `2` | Invalid arguments, values, or selector |
+| `3` | D-Bus/device connectivity, daemon absence, storage, or all-offline aggregate failure |
+| `4` | Device HTTP/protocol/response failure |
+| `5` | Partial aggregate failure (at least one success and at least one failure/skip) |
+
+With `--json`, successful and partial aggregate output is one document on stdout; structured command errors are written to stderr.
 
 ## systemd user service
 
-The repository includes `systemd/elgatobar.service`. Install the built daemon and unit through packaging or copy them to suitable user locations, then create `~/.config/elgatobar/daemon.env`:
-
-```ini
-ELGATOBAR_ENDPOINT=key-light.local
-```
-
-Reload and enable the user service:
+The repository includes `systemd/elgatobar.service`. Install the built daemon and unit through packaging or copy them to suitable user locations, then run:
 
 ```bash
 systemctl --user daemon-reload
 systemctl --user enable --now elgatobar.service
+elgatobar devices add key-light.local
 journalctl --user -u elgatobar.service
 ```
 
-The service acquires `io.github.ttiimmaahh.ElgatoBar1` on the user session bus. Separate D-Bus activation is intentionally not installed.
+No `ELGATOBAR_ENDPOINT` environment file is required. The service acquires `io.github.ttiimmaahh.ElgatoBar1` on the user session bus; separate D-Bus activation is intentionally not installed.
 
 ## Security and hardware validation
 
-Devices expose unauthenticated plaintext LAN HTTP. Run the daemon only on a trusted local network; requests disable redirects and environment proxy inheritance. See `../shared/protocol/elgato-http-v1.md` and `../shared/protocol/elgatobar-dbus-v1.md`.
+Devices expose unauthenticated plaintext LAN HTTP. Run the daemon only on a trusted local network; requests disable redirects and environment proxy inheritance. See the shared HTTP and D-Bus protocol documents.
 
-An Elgato Ring Light running firmware 1.0.4 was smoke-tested through the daemon and D-Bus CLI on 2026-07-20. The test exercised info, cached state, refresh, set, toggle, and identify, then restored and re-read the exact original power, brightness, and temperature state. The device address and serial number are intentionally not recorded in the repository.
+Hardware validation must use the daemon-backed CLI. Immediately before mutation, record current power, brightness, and native temperature; use cleanup that restores every field even after a failure; then re-read and compare exact values. Never record private device addresses or serial numbers in repository files or public issue comments.

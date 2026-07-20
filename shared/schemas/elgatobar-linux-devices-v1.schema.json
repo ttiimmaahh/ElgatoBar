@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ttiimmaahh/ElgatoBar/shared/schemas/elgatobar-linux-devices-v1.schema.json",
+  "title": "ElgatoBar Linux device inventory v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "devices"],
+  "properties": {
+    "version": { "const": 1 },
+    "devices": {
+      "type": "array",
+      "items": { "$ref": "elgatobar-interchange-v1.schema.json#/$defs/device" }
+    }
+  }
+}

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use thiserror::Error;
 
@@ -61,4 +63,33 @@ pub trait LightTransport: Send + Sync {
     ) -> Result<LightState, TransportError>;
 
     async fn identify(&self, endpoint: &DeviceEndpoint) -> Result<(), TransportError>;
+}
+
+#[async_trait]
+impl<T> LightTransport for Arc<T>
+where
+    T: LightTransport + ?Sized,
+{
+    async fn accessory_info(
+        &self,
+        endpoint: &DeviceEndpoint,
+    ) -> Result<AccessoryInfo, TransportError> {
+        (**self).accessory_info(endpoint).await
+    }
+
+    async fn light_state(&self, endpoint: &DeviceEndpoint) -> Result<LightState, TransportError> {
+        (**self).light_state(endpoint).await
+    }
+
+    async fn set_light_state(
+        &self,
+        endpoint: &DeviceEndpoint,
+        state: LightState,
+    ) -> Result<LightState, TransportError> {
+        (**self).set_light_state(endpoint, state).await
+    }
+
+    async fn identify(&self, endpoint: &DeviceEndpoint) -> Result<(), TransportError> {
+        (**self).identify(endpoint).await
+    }
 }

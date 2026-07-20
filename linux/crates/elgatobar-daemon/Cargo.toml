@@ -15,9 +15,13 @@ clap.workspace = true
 elgatobar-core = { path = "../elgatobar-core" }
 elgatobar-dbus = { path = "../elgatobar-dbus" }
 tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
 zbus.workspace = true
 
 [dev-dependencies]
 futures-util = "0.3"
 serde_json.workspace = true
+tempfile = "3"
 wiremock = "0.6"
