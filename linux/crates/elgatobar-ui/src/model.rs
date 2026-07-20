@@ -76,6 +76,13 @@ pub struct WindowModel {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ViewState {
+    model: WindowModel,
+    aggregate_pending: bool,
+    configuration_pending: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FeedbackKind {
     Success,
     PartialFailure,
@@ -253,6 +260,14 @@ impl Controller {
             stale,
             summary,
             rows,
+        }
+    }
+
+    pub fn view_state(&self) -> ViewState {
+        ViewState {
+            model: self.model(),
+            aggregate_pending: self.aggregate_pending(),
+            configuration_pending: self.configuration_pending(),
         }
     }
 

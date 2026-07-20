@@ -63,7 +63,7 @@ fn build_ui(app: &adw::Application) {
         let Some(ui) = weak.upgrade() else {
             return glib::ControlFlow::Break;
         };
-        let mut changed = false;
+        let before = view_state(&ui);
         loop {
             let event = {
                 ui.client
@@ -73,14 +73,17 @@ fn build_ui(app: &adw::Application) {
             };
             let Some(event) = event else { break };
             handle_event(&ui, event);
-            changed = true;
         }
-        if changed {
+        if before != view_state(&ui) {
             render(&ui);
         }
         glib::ControlFlow::Continue
     });
     ui.window.present();
+}
+
+fn view_state(ui: &Ui) -> elgatobar_ui::model::ViewState {
+    ui.controller.borrow().view_state()
 }
 
 fn send(ui: &Rc<Ui>, intent: Intent) {
@@ -171,6 +174,10 @@ fn handle_event(ui: &Rc<Ui>, event: ClientEvent) {
 }
 
 fn render(ui: &Rc<Ui>) {
+    let focused = gtk::prelude::GtkWindowExt::focus(&ui.window).and_then(|widget| {
+        let name = widget.widget_name().to_string();
+        name.starts_with("elgatobar-").then_some(name)
+    });
     while let Some(child) = ui.content.first_child() {
         ui.content.remove(&child);
     }
@@ -182,6 +189,8 @@ fn render(ui: &Rc<Ui>) {
         .icon_name("list-add-symbolic")
         .tooltip_text("Add Light")
         .build();
+    add.set_widget_name("elgatobar-add");
+    add.update_property(&[gtk::accessible::Property::Label("Add Light")]);
     add.set_sensitive(
         !ui.controller.borrow().configuration_pending()
             && !matches!(
@@ -198,6 +207,8 @@ fn render(ui: &Rc<Ui>) {
         .icon_name("view-refresh-symbolic")
         .tooltip_text("Refresh All")
         .build();
+    refresh.set_widget_name("elgatobar-refresh");
+    refresh.update_property(&[gtk::accessible::Property::Label("Refresh All")]);
     refresh.set_sensitive(
         !ui.controller.borrow().aggregate_pending()
             && !matches!(
@@ -243,6 +254,7 @@ fn render(ui: &Rc<Ui>) {
             status.set_child(Some(&button));
         }
         ui.content.append(&status);
+        restore_focus(ui, focused.as_deref());
         return;
     }
     let toolbar = gtk::Box::new(gtk::Orientation::Horizontal, 8);
@@ -256,6 +268,7 @@ fn render(ui: &Rc<Ui>) {
     summary.set_wrap(true);
     toolbar.append(&summary);
     let toggle_all = gtk::Button::with_label("Toggle All");
+    toggle_all.set_widget_name("elgatobar-toggle-all");
     toggle_all.set_sensitive(
         !ui.controller.borrow().aggregate_pending()
             && !model.stale
@@ -280,6 +293,29 @@ fn render(ui: &Rc<Ui>) {
     }
     scroll.set_child(Some(&list));
     ui.content.append(&scroll);
+    restore_focus(ui, focused.as_deref());
+}
+
+fn restore_focus(ui: &Ui, name: Option<&str>) {
+    let Some(name) = name else { return };
+    let root: gtk::Widget = ui.content.clone().upcast();
+    if let Some(widget) = find_named(&root, name) {
+        widget.grab_focus();
+    }
+}
+
+fn find_named(root: &gtk::Widget, name: &str) -> Option<gtk::Widget> {
+    if root.widget_name() == name {
+        return Some(root.clone());
+    }
+    let mut child = root.first_child();
+    while let Some(widget) = child {
+        if let Some(found) = find_named(&widget, name) {
+            return Some(found);
+        }
+        child = widget.next_sibling();
+    }
+    None
 }
 
 fn device_card(ui: &Rc<Ui>, row: elgatobar_ui::model::DeviceRow) -> gtk::Widget {
@@ -308,6 +344,13 @@ fn device_card(ui: &Rc<Ui>, row: elgatobar_ui::model::DeviceRow) -> gtk::Widget 
         .sensitive(row.mutations_enabled && !row.pending)
         .tooltip_text("Toggle this light")
         .build();
+    power.set_focusable(true);
+    power.set_can_focus(true);
+    power.set_widget_name(&format!("elgatobar-power-{}", row.id));
+    power.update_property(&[gtk::accessible::Property::Label("Power")]);
+    let power_label = gtk::Label::new(Some("_Power"));
+    power_label.set_use_underline(true);
+    power_label.set_mnemonic_widget(Some(&power));
     {
         let ui = ui.clone();
         let id = row.id.clone();
@@ -316,6 +359,7 @@ fn device_card(ui: &Rc<Ui>, row: elgatobar_ui::model::DeviceRow) -> gtk::Widget 
             glib::Propagation::Stop
         });
     }
+    heading.append(&power_label);
     heading.append(&power);
     card.append(&heading);
     if let Some(state) = row.state {
@@ -328,7 +372,9 @@ fn device_card(ui: &Rc<Ui>, row: elgatobar_ui::model::DeviceRow) -> gtk::Widget 
                 .unwrap_or(3.0),
         );
         b.set_sensitive(row.mutations_enabled);
+        b.set_widget_name(&format!("elgatobar-brightness-{}", row.id));
         b.set_tooltip_text(Some("Brightness, 3 to 100 percent"));
+        b.update_property(&[gtk::accessible::Property::Label("Brightness")]);
         {
             let ui = ui.clone();
             let id = row.id.clone();
@@ -351,10 +397,12 @@ fn device_card(ui: &Rc<Ui>, row: elgatobar_ui::model::DeviceRow) -> gtk::Widget 
         t.set_value(f64::from(native));
         t.set_inverted(true);
         t.set_sensitive(row.mutations_enabled);
+        t.set_widget_name(&format!("elgatobar-temperature-{}", row.id));
         t.set_tooltip_text(Some(&format!(
             "{}; warmer to cooler",
             state.native_temperature
         )));
+        t.update_property(&[gtk::accessible::Property::Label("Temperature")]);
         {
             let ui = ui.clone();
             let id = row.id.clone();
@@ -380,6 +428,7 @@ fn device_card(ui: &Rc<Ui>, row: elgatobar_ui::model::DeviceRow) -> gtk::Widget 
     }
     let actions = gtk::Box::new(gtk::Orientation::Horizontal, 6);
     let identify = gtk::Button::with_label("Identify");
+    identify.set_widget_name(&format!("elgatobar-identify-{}", row.id));
     identify.set_sensitive(row.mutations_enabled && !row.pending);
     {
         let ui = ui.clone();
@@ -388,6 +437,7 @@ fn device_card(ui: &Rc<Ui>, row: elgatobar_ui::model::DeviceRow) -> gtk::Widget 
     }
     actions.append(&identify);
     let remove = gtk::Button::with_label("Remove…");
+    remove.set_widget_name(&format!("elgatobar-remove-{}", row.id));
     remove.set_sensitive(!ui.controller.borrow().model().stale && !row.pending);
     remove.add_css_class("destructive-action");
     {
@@ -453,7 +503,7 @@ fn add_dialog(ui: &Rc<Ui>) {
     window.set_default_widget(Some(&add));
     {
         let window = window.clone();
-        cancel.connect_clicked(move |_| window.hide());
+        cancel.connect_clicked(move |_| window.set_visible(false));
     }
     {
         let ui = ui.clone();

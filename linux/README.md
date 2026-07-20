@@ -36,7 +36,7 @@ The UI shows the daemon's complete cached inventory, including friendly names, s
 
 For first setup, either use the Add Light button or the daemon-backed CLI command shown below. Validation remains in the daemon; the UI never probes an endpoint itself.
 
-Desktop acceptance should be performed in a graphical login: verify theme and keyboard focus, launch twice to confirm one window, stop/restart `elgatobar.service` to confirm stale/recovery behavior, exercise an isolated-XDG empty/add/remove flow, close the UI, and confirm the daemon remains active. Automated model tests do not require a display. A process smoke test can use `xvfb-run` when available, but native Wayland acceptance remains a manual desktop check.
+Desktop acceptance should be performed in a graphical login: verify theme and keyboard focus (including that focus survives daemon polling), launch twice to confirm one window, stop/restart `elgatobar.service` to confirm stale/recovery behavior, exercise an isolated-XDG empty/add/remove flow, close the UI, and confirm the daemon remains active. The power switch exposes a `Power` mnemonic and GTK accessibility labels are supplied for icon-only and range controls. Automated model tests do not require a display. A process smoke test can use `xvfb-run` when available, but native Wayland acceptance remains a manual desktop check.
 
 ## Storage and first-device setup
 

@@ -178,6 +178,17 @@ fn replacement_removes_absent_devices_and_stale_completion_cannot_change_it() {
 }
 
 #[test]
+fn identical_replacement_does_not_change_the_rendered_view_state() {
+    let snapshot = device("a", true, true, true, 50, 250);
+    let (mut controller, _) = state(vec![snapshot.clone()]);
+    let before = controller.view_state();
+
+    controller.replace(vec![snapshot]);
+
+    assert_eq!(controller.view_state(), before);
+}
+
+#[test]
 fn feedback_covers_success_partial_complete_skip_and_error_categories() {
     let result = |status: &str, kind: &str| OperationResult {
         device_id: status.into(),
