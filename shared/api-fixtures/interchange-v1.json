@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "devices": [
+    {
+      "identity": {
+        "kind": "serial",
+        "serial": "cw12a1a00001"
+      },
+      "name": "Desk Key Light",
+      "endpoint": {
+        "host": "192.0.2.10",
+        "port": 9123
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "018f4eb6-4c42-7f6f-b7fb-0d3cae900001",
+      "name": "Meeting",
+      "lights": [
+        {
+          "deviceIdentity": {
+            "kind": "serial",
+            "serial": "cw12a1a00001"
+          },
+          "state": {
+            "isOn": true,
+            "brightness": 75,
+            "temperature": 200
+          }
+        }
+      ]
+    }
+  ]
+}

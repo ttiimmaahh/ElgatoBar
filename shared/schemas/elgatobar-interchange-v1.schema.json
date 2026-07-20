@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ttiimmaahh/ElgatoBar/shared/schemas/elgatobar-interchange-v1.schema.json",
+  "title": "ElgatoBar interchange document v1",
+  "description": "UUIDs use lowercase hyphenated text. Stored IPv6 hosts are unbracketed. JSON numbers satisfying integer constraints may use mathematically integral forms such as 53.0; writers emit canonical integer tokens.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "devices", "scenes"],
+  "properties": {
+    "version": { "const": 1 },
+    "devices": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/device" }
+    },
+    "scenes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/scene" }
+    }
+  },
+  "$defs": {
+    "nonBlankString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": ".*[^\\s\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000].*"
+    },
+    "canonicalUuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "endpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["host", "port"],
+      "properties": {
+        "host": {
+          "type": "string",
+          "minLength": 1,
+          "oneOf": [
+            {
+              "description": "DNS name or IPv4 address without URL delimiters, percent escapes, brackets, or Unicode whitespace",
+              "pattern": "^[^:\\s\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000/\\\\@?#%\\[\\]]+$"
+            },
+            {
+              "description": "Unbracketed IPv6 address",
+              "pattern": "^[0-9A-Fa-f:.]+$",
+              "format": "ipv6"
+            }
+          ]
+        },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+      }
+    },
+    "identity": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "serial"],
+          "properties": {
+            "kind": { "const": "serial" },
+            "serial": { "$ref": "#/$defs/nonBlankString" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "instance", "productName", "hardwareBoardType"],
+          "properties": {
+            "kind": { "const": "mdns" },
+            "instance": { "$ref": "#/$defs/nonBlankString" },
+            "productName": { "$ref": "#/$defs/nonBlankString" },
+            "hardwareBoardType": {
+              "type": "integer",
+              "minimum": -9223372036854775808,
+              "maximum": 9223372036854775807
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "id", "confirmedEndpoint"],
+          "properties": {
+            "kind": { "const": "installation-local" },
+            "id": { "$ref": "#/$defs/canonicalUuid" },
+            "confirmedEndpoint": { "$ref": "#/$defs/endpoint" }
+          }
+        }
+      ]
+    },
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["isOn", "brightness", "temperature"],
+      "properties": {
+        "isOn": { "type": "boolean" },
+        "brightness": { "type": "integer", "minimum": 3, "maximum": 100 },
+        "temperature": { "type": "integer", "minimum": 143, "maximum": 344 }
+      }
+    },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "name", "endpoint"],
+      "properties": {
+        "identity": { "$ref": "#/$defs/identity" },
+        "name": { "$ref": "#/$defs/nonBlankString" },
+        "endpoint": { "$ref": "#/$defs/endpoint" }
+      }
+    },
+    "sceneLight": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deviceIdentity", "state"],
+      "properties": {
+        "deviceIdentity": { "$ref": "#/$defs/identity" },
+        "state": { "$ref": "#/$defs/state" }
+      }
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "lights"],
+      "properties": {
+        "id": { "$ref": "#/$defs/canonicalUuid" },
+        "name": { "$ref": "#/$defs/nonBlankString" },
+        "lights": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sceneLight" }
+        }
+      }
+    }
+  }
+}

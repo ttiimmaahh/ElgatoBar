@@ -1,0 +1,9 @@
+{
+  "lights": [
+    {
+      "on": 0,
+      "brightness": 75,
+      "temperature": 200
+    }
+  ]
+}

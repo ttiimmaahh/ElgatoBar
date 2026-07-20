@@ -1,0 +1,14 @@
+{
+  "productName": "Key Light",
+  "hardwareBoardType": 53,
+  "firmwareBuildNumber": 218,
+  "firmwareVersion": "1.0.3",
+  "serialNumber": "CW12A1A00001",
+  "displayName": "Desk Key Light",
+  "features": ["lights"],
+  "wifi-info": {
+    "ssid": "trusted-lan",
+    "frequencyMHz": 5180,
+    "rssi": -48
+  }
+}

@@ -30,6 +30,13 @@ DerivedData/
 .build/
 .swiftpm/
 
+## Rust
+/target/
+
+## Local agent artifacts
+.pi/
+.pi-subagents/
+
 ## CocoaPods / Carthage (if ever added)
 Pods/
 Carthage/Build/
