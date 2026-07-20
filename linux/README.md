@@ -1,10 +1,16 @@
 # ElgatoBar for Linux
 
-The Linux edition provides a portable Rust control core, a persistent multi-device user-session daemon, a typed D-Bus interface, and the `elgatobar` client CLI. The daemon is the only shipped Linux process that polls or writes lights. CLI, future GTK, and future Waybar clients require D-Bus and never silently fall back to direct device HTTP.
+The Linux edition provides a portable Rust control core, a persistent multi-device user-session daemon, a typed D-Bus interface, the `elgatobar` client CLI, and a compact GTK4/libadwaita control application. The daemon is the only shipped Linux process that polls or writes lights. CLI, GTK, and future Waybar clients require D-Bus and never silently fall back to direct device HTTP.
 
-Discovery, network scanning, scenes, GTK, and Waybar remain later milestones. Devices are added explicitly by endpoint.
+Discovery, network scanning, scenes, and Waybar remain later milestones. Devices are added explicitly by endpoint.
 
 ## Build and test
+
+Install Rust plus the GTK4 and libadwaita development packages. The UI currently targets gtk-rs GTK 4.22-compatible bindings and libadwaita 1.5 APIs; on Arch Linux the system packages are `gtk4` and `libadwaita`, while Debian-family systems commonly name the development packages `libgtk-4-dev` and `libadwaita-1-dev`. Verify discovery with:
+
+```bash
+pkg-config --modversion gtk4 libadwaita-1
+```
 
 ```bash
 cargo build --workspace
@@ -14,6 +20,23 @@ cargo test --workspace --all-features
 ```
 
 The integration tests create isolated session buses and temporary XDG roots. They exercise persistence across daemon restarts, D-Bus methods and signals, CLI process behavior, retry/offline rules, aggregates, and partial failure without physical hardware.
+
+## Compact graphical controls
+
+Start the user-session daemon, then launch the graphical client:
+
+```bash
+cargo run -p elgatobar-daemon
+cargo run -p elgatobar-ui
+```
+
+The graphical application ID is `io.github.ttiimmaahh.ElgatoBar`. GTK/GApplication claims that name on the graphical session bus, so launching it again activates and presents the existing window. Closing the window exits only the UI; it does not stop or manage the daemon.
+
+The UI shows the daemon's complete cached inventory, including friendly names, stable IDs, endpoints, online state, and last-known values. It supports refresh-all, daemon aggregate toggle-all, per-device power, committed/coalesced brightness and native-temperature changes with Kelvin labels, identify, validated endpoint add, and confirmed local-only removal. Offline or daemon-disconnected values remain visible as stale context while physical controls are disabled. `DevicesChanged` is consumed as a full replacement inventory. If `io.github.ttiimmaahh.ElgatoBar1` disappears, the UI remains open and reconnects with bounded exponential backoff; Retry requests an immediate attempt.
+
+For first setup, either use the Add Light button or the daemon-backed CLI command shown below. Validation remains in the daemon; the UI never probes an endpoint itself.
+
+Desktop acceptance should be performed in a graphical login: verify theme and keyboard focus, launch twice to confirm one window, stop/restart `elgatobar.service` to confirm stale/recovery behavior, exercise an isolated-XDG empty/add/remove flow, close the UI, and confirm the daemon remains active. Automated model tests do not require a display. A process smoke test can use `xvfb-run` when available, but native Wayland acceptance remains a manual desktop check.
 
 ## Storage and first-device setup
 
