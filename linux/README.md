@@ -59,4 +59,4 @@ The service acquires `io.github.ttiimmaahh.ElgatoBar1` on the user session bus. 
 
 Devices expose unauthenticated plaintext LAN HTTP. Run the daemon only on a trusted local network; requests disable redirects and environment proxy inheritance. See `../shared/protocol/elgato-http-v1.md` and `../shared/protocol/elgatobar-dbus-v1.md`.
 
-No real-light endpoint was supplied for these implementation runs, so hardware smoke testing has not been run. Before release, record the current state, exercise info/state/set/toggle/identify through the daemon, and restore the original state where practical.
+An Elgato Ring Light running firmware 1.0.4 was smoke-tested through the daemon and D-Bus CLI on 2026-07-20. The test exercised info, cached state, refresh, set, toggle, and identify, then restored and re-read the exact original power, brightness, and temperature state. The device address and serial number are intentionally not recorded in the repository.
