@@ -1,10 +1,8 @@
-use std::{process::ExitCode, str::FromStr, time::Duration};
+use std::process::ExitCode;
 
 use clap::{Args, Error as ClapError, Parser, Subcommand};
-use elgatobar_core::{
-    ApplicationController, Brightness, CommandResult, DeviceCommand, DeviceEndpoint,
-    ElgatoTemperature, ReqwestLightTransport, SetLightState, TransportError,
-};
+use elgatobar_core::{Brightness, ElgatoTemperature};
+use elgatobar_dbus::{AccessorySnapshot, ElgatoBarProxy, LightSnapshot};
 use serde::Serialize;
 
 const EXIT_INPUT: u8 = 2;
@@ -15,17 +13,13 @@ const EXIT_PROTOCOL: u8 = 4;
 #[command(
     name = "elgatobar",
     version,
-    about = "Control an Elgato light directly over the trusted local network",
-    after_help = "ENDPOINT accepts host, host:port, or http://host:port (default port: 9123)."
+    about = "Control the ElgatoBar user daemon",
+    after_help = "The daemon must own io.github.ttiimmaahh.ElgatoBar1 on the user session bus."
 )]
 struct Cli {
     /// Emit one JSON document on stdout (and structured errors on stderr).
     #[arg(long, global = true)]
     json: bool,
-
-    /// Per-device request timeout in milliseconds.
-    #[arg(long, global = true, default_value_t = 5_000)]
-    timeout_ms: u64,
 
     #[command(subcommand)]
     command: Command,
@@ -33,22 +27,22 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
-    /// Read accessory information.
-    Info { endpoint: String },
-    /// Read the current light state.
-    State { endpoint: String },
+    /// Read accessory information from the configured light.
+    Info,
+    /// Read the daemon's latest snapshot without polling the light.
+    State,
+    /// Poll the configured light now and return the new snapshot.
+    Refresh,
     /// Change one or more state fields while preserving the others.
     Set(SetArgs),
     /// Toggle power while preserving brightness and temperature.
-    Toggle { endpoint: String },
-    /// Flash the physical light for identification.
-    Identify { endpoint: String },
+    Toggle,
+    /// Flash the configured physical light for identification.
+    Identify,
 }
 
 #[derive(Debug, Args)]
 struct SetArgs {
-    endpoint: String,
-
     /// Turn the light on.
     #[arg(long, conflicts_with = "off")]
     on: bool,
@@ -92,6 +86,35 @@ impl AppError {
         }
     }
 
+    fn dbus(error: zbus::Error) -> Self {
+        if let zbus::Error::MethodError(name, detail, _) = &error {
+            let kind = if name.as_str().ends_with(".InvalidInput") {
+                ErrorKind::InvalidInput
+            } else if name.as_str().ends_with(".Connectivity") {
+                ErrorKind::Connectivity
+            } else if name.as_str().ends_with(".Protocol") {
+                ErrorKind::Protocol
+            } else {
+                ErrorKind::Connectivity
+            };
+            return Self {
+                kind,
+                message: detail.clone().unwrap_or_else(|| error.to_string()),
+            };
+        }
+        Self {
+            kind: ErrorKind::Connectivity,
+            message: format!("ElgatoBar daemon is unavailable: {error}"),
+        }
+    }
+
+    fn protocol(message: impl Into<String>) -> Self {
+        Self {
+            kind: ErrorKind::Protocol,
+            message: message.into(),
+        }
+    }
+
     fn exit_code(&self) -> u8 {
         match self.kind {
             ErrorKind::InvalidInput => EXIT_INPUT,
@@ -101,18 +124,12 @@ impl AppError {
     }
 }
 
-impl From<TransportError> for AppError {
-    fn from(error: TransportError) -> Self {
-        let kind = if error.is_connectivity() {
-            ErrorKind::Connectivity
-        } else {
-            ErrorKind::Protocol
-        };
-        Self {
-            kind,
-            message: error.to_string(),
-        }
-    }
+#[derive(Debug, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+enum Output {
+    AccessoryInfo { accessory: AccessorySnapshot },
+    State { state: LightSnapshot },
+    Identified,
 }
 
 #[derive(Serialize)]
@@ -166,67 +183,78 @@ fn report_parse_error(error: ClapError, json_requested: bool) -> ExitCode {
     ExitCode::from(EXIT_INPUT)
 }
 
-async fn run(cli: Cli) -> Result<CommandResult, AppError> {
-    if cli.timeout_ms == 0 {
-        return Err(AppError::input("timeout must be greater than zero"));
-    }
-    let (endpoint_text, command) = command_from_cli(cli.command)?;
-    let endpoint = parse_endpoint(&endpoint_text)?;
-    let transport = ReqwestLightTransport::with_timeout(Duration::from_millis(cli.timeout_ms))
-        .map_err(AppError::from)?;
-    ApplicationController::new(transport)
-        .execute(&endpoint, command)
+async fn run(cli: Cli) -> Result<Output, AppError> {
+    let connection = zbus::Connection::session().await.map_err(AppError::dbus)?;
+    let proxy = ElgatoBarProxy::new(&connection)
         .await
-        .map_err(AppError::from)
-}
-
-fn parse_endpoint(value: &str) -> Result<DeviceEndpoint, AppError> {
-    DeviceEndpoint::from_str(value).map_err(|error| AppError::input(error.to_string()))
-}
-
-fn command_from_cli(command: Command) -> Result<(String, DeviceCommand), AppError> {
-    match command {
-        Command::Info { endpoint } => Ok((endpoint, DeviceCommand::AccessoryInfo)),
-        Command::State { endpoint } => Ok((endpoint, DeviceCommand::State)),
-        Command::Toggle { endpoint } => Ok((endpoint, DeviceCommand::Toggle)),
-        Command::Identify { endpoint } => Ok((endpoint, DeviceCommand::Identify)),
+        .map_err(AppError::dbus)?;
+    match cli.command {
+        Command::Info => proxy
+            .accessory_info()
+            .await
+            .map(|accessory| Output::AccessoryInfo { accessory })
+            .map_err(AppError::dbus),
+        Command::State => proxy
+            .snapshot()
+            .await
+            .map_err(AppError::dbus)
+            .and_then(state_output),
+        Command::Refresh => proxy
+            .refresh()
+            .await
+            .map_err(AppError::dbus)
+            .and_then(state_output),
+        Command::Toggle => proxy
+            .toggle()
+            .await
+            .map_err(AppError::dbus)
+            .and_then(state_output),
+        Command::Identify => proxy
+            .identify()
+            .await
+            .map(|()| Output::Identified)
+            .map_err(AppError::dbus),
         Command::Set(args) => {
-            let power = if args.on {
-                Some(true)
-            } else if args.off {
-                Some(false)
-            } else {
-                None
-            };
+            let has_power = args.on || args.off;
+            let power = args.on;
             let brightness = args
                 .brightness
                 .map(Brightness::try_from)
                 .transpose()
-                .map_err(|error| AppError::input(error.to_string()))?;
+                .map_err(|error| AppError::input(error.to_string()))?
+                .map_or(0, Brightness::get);
             let temperature = args
                 .temperature
                 .map(ElgatoTemperature::try_from)
                 .transpose()
                 .map_err(|error| AppError::input(error.to_string()))?
-                .or_else(|| args.kelvin.map(ElgatoTemperature::from_kelvin));
-            if power.is_none() && brightness.is_none() && temperature.is_none() {
+                .or_else(|| args.kelvin.map(ElgatoTemperature::from_kelvin))
+                .map_or(0, ElgatoTemperature::get);
+            if !has_power && brightness == 0 && temperature == 0 {
                 return Err(AppError::input(
                     "set requires at least one of --on, --off, --brightness, --temperature, or --kelvin",
                 ));
             }
-            Ok((
-                args.endpoint,
-                DeviceCommand::Set(SetLightState {
-                    power,
-                    brightness,
-                    temperature,
-                }),
-            ))
+            proxy
+                .set_state(has_power, power, brightness, temperature)
+                .await
+                .map_err(AppError::dbus)
+                .and_then(state_output)
         }
     }
 }
 
-fn print_result(result: &CommandResult, json: bool) {
+fn state_output(state: LightSnapshot) -> Result<Output, AppError> {
+    if state.online {
+        Brightness::try_from(state.brightness)
+            .map_err(|error| AppError::protocol(format!("daemon returned {error}")))?;
+        ElgatoTemperature::try_from(state.temperature)
+            .map_err(|error| AppError::protocol(format!("daemon returned {error}")))?;
+    }
+    Ok(Output::State { state })
+}
+
+fn print_result(result: &Output, json: bool) {
     if json {
         match serde_json::to_string(result) {
             Ok(document) => println!("{document}"),
@@ -235,23 +263,30 @@ fn print_result(result: &CommandResult, json: bool) {
         return;
     }
     match result {
-        CommandResult::AccessoryInfo { accessory } => {
-            println!("Name: {}", accessory.best_name());
+        Output::AccessoryInfo { accessory } => {
+            println!("Name: {}", accessory.display_name);
             println!("Product: {}", accessory.product_name);
             println!("Serial: {}", accessory.serial_number);
             println!("Firmware: {}", accessory.firmware_version);
             println!("Hardware board: {}", accessory.hardware_board_type);
         }
-        CommandResult::State { state } => {
-            println!("Power: {}", if state.is_on { "on" } else { "off" });
-            println!("Brightness: {}%", state.brightness.get());
+        Output::State { state } => {
+            println!("Endpoint: {}", state.endpoint);
             println!(
-                "Temperature: {} K (Elgato {})",
-                state.temperature.to_kelvin(),
-                state.temperature.get()
+                "Status: {}",
+                if state.online { "online" } else { "offline" }
             );
+            if state.online {
+                println!("Power: {}", if state.is_on { "on" } else { "off" });
+                println!("Brightness: {}%", state.brightness);
+                let kelvin = 1_000_000 / u32::from(state.temperature);
+                println!("Temperature: {kelvin} K (Elgato {})", state.temperature);
+            }
+            if !state.last_error.is_empty() {
+                println!("Last error: {}", state.last_error);
+            }
         }
-        CommandResult::Identified => println!("Identify request sent."),
+        Output::Identified => println!("Identify request sent."),
     }
 }
 
@@ -269,20 +304,5 @@ fn print_error(error: &AppError, json: bool) {
         }
     } else {
         eprintln!("Error: {}", error.message);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{AppError, parse_endpoint};
-
-    #[test]
-    fn cli_input_accepts_standard_bracketed_ipv6_forms() -> Result<(), AppError> {
-        for value in ["http://[::1]:9123", "[::1]:9123"] {
-            let endpoint = parse_endpoint(value)?;
-            assert_eq!(endpoint.host(), "::1");
-            assert_eq!(endpoint.port(), 9123);
-        }
-        Ok(())
     }
 }

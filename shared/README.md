@@ -3,6 +3,7 @@
 Swift and Rust do not share executable source. They share only reviewed behavior contracts:
 
 - `protocol/elgato-http-v1.md` — Elgato LAN HTTP methods, payloads, errors, and trust model.
+- `protocol/elgatobar-dbus-v1.md` — Linux daemon/client service boundary, snapshots, signals, and errors.
 - `api-fixtures/` — recorded known-good and edge-case JSON examples.
 - `schemas/elgatobar-interchange-v1.schema.json` — versioned device/scene interchange format.
 - `feature-parity.md` — delivered and deferred platform capabilities.

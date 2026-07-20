@@ -1,0 +1,14 @@
+[Unit]
+Description=ElgatoBar light control daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/elgatobar/daemon.env
+ExecStart=/usr/bin/elgatobar-daemon
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

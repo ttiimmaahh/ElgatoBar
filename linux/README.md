@@ -1,6 +1,8 @@
-# ElgatoBar for Linux — standalone milestone
+# ElgatoBar for Linux
 
-This milestone provides a portable Rust control core and the `elgatobar` direct CLI. It intentionally does not install a daemon or implement D-Bus, GTK, Waybar, discovery, scanning, or persistence. Direct access is temporary; the daemon milestone will make the daemon the only device poller and writer.
+The current Linux edition provides a portable Rust control core, a user-session daemon, a versioned D-Bus API, and the `elgatobar` client CLI. This daemon foundation intentionally manages one manually configured endpoint. Discovery, scanning, persistence, scenes, aggregate commands, GTK, and Waybar remain later milestones.
+
+The daemon is now the only shipped Linux component that polls or writes a light. The CLI requires D-Bus and never silently falls back to direct HTTP.
 
 ## Build and test
 
@@ -11,23 +13,50 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
 ```
 
-## Direct CLI
+The D-Bus integration tests create isolated session buses with `dbus-run-session` and exercise the daemon, public methods, state snapshots, signals, and CLI process boundary without physical hardware.
 
-Endpoints accept `host`, `host:port`, or `http://host:port`; omitted ports default to `9123`.
+## Run from the workspace
+
+Start the daemon in a graphical login session, replacing the endpoint with your light:
 
 ```bash
-cargo run -p elgatobar-cli -- info key-light.local
-cargo run -p elgatobar-cli -- state 192.168.1.20:9123
-cargo run -p elgatobar-cli -- set 192.168.1.20 --on --brightness 75 --kelvin 5000
-cargo run -p elgatobar-cli -- toggle 192.168.1.20
-cargo run -p elgatobar-cli -- identify 192.168.1.20
-cargo run -p elgatobar-cli -- --json state 192.168.1.20
+cargo run -p elgatobar-daemon -- --endpoint key-light.local
 ```
 
-Exit statuses are `0` for success, `2` for invalid arguments/endpoints/domain values, `3` for timeout or connectivity failure, and `4` for HTTP/protocol/response failure. A partial-failure status is reserved for later multi-device commands.
+Then use the client from another terminal in the same user session:
+
+```bash
+cargo run -p elgatobar-cli -- info
+cargo run -p elgatobar-cli -- state
+cargo run -p elgatobar-cli -- refresh
+cargo run -p elgatobar-cli -- set --on --brightness 75 --kelvin 5000
+cargo run -p elgatobar-cli -- toggle
+cargo run -p elgatobar-cli -- identify
+cargo run -p elgatobar-cli -- --json state
+```
+
+`state` returns the daemon's cached snapshot; `refresh` performs an immediate device poll. The daemon otherwise polls every five seconds. CLI exit statuses are `0` for success, `2` for invalid arguments/domain values, `3` for daemon or device connectivity failure, and `4` for HTTP/protocol/response failure.
+
+## systemd user service
+
+The repository includes `systemd/elgatobar.service`. Install the built daemon and unit through packaging or copy them to suitable user locations, then create `~/.config/elgatobar/daemon.env`:
+
+```ini
+ELGATOBAR_ENDPOINT=key-light.local
+```
+
+Reload and enable the user service:
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now elgatobar.service
+journalctl --user -u elgatobar.service
+```
+
+The service acquires `io.github.ttiimmaahh.ElgatoBar1` on the user session bus. Separate D-Bus activation is intentionally not installed.
 
 ## Security and hardware validation
 
-Devices expose unauthenticated plaintext LAN HTTP. Use the CLI only on a trusted local network; requests disable redirects and environment proxy inheritance. See `../shared/protocol/elgato-http-v1.md`.
+Devices expose unauthenticated plaintext LAN HTTP. Run the daemon only on a trusted local network; requests disable redirects and environment proxy inheritance. See `../shared/protocol/elgato-http-v1.md` and `../shared/protocol/elgatobar-dbus-v1.md`.
 
-No real-light endpoint was supplied for this implementation run, so hardware smoke testing was not run. Before release, record the current state, exercise info/state/set/toggle/identify, and restore the original state where practical.
+No real-light endpoint was supplied for these implementation runs, so hardware smoke testing has not been run. Before release, record the current state, exercise info/state/set/toggle/identify through the daemon, and restore the original state where practical.

@@ -29,9 +29,9 @@ xcodebuild clean -scheme ElgatoBar && xcodebuild -scheme ElgatoBar build
 
 Or open `ElgatoBar.xcodeproj` in Xcode and run the `ElgatoBar` scheme.
 
-### Linux standalone milestone
+### Linux edition
 
-The repository also contains an incremental Rust workspace for the Linux edition. The first milestone provides the portable control core and direct `elgatobar` CLI without moving or changing the macOS project. See [`linux/README.md`](linux/README.md) for commands, scope, validation, and security notes; shared protocol fixtures and the versioned interchange schema live under [`shared/`](shared/).
+The repository also contains an incremental Rust workspace for the Linux edition. It currently provides the portable control core, a user-session daemon, a versioned D-Bus API, and the `elgatobar` client CLI without moving or changing the macOS project. See [`linux/README.md`](linux/README.md) for commands, scope, validation, and security notes; shared protocol fixtures and the versioned interchange schema live under [`shared/`](shared/).
 
 > **Note:** Code signing is set to *Automatic* with no development team baked in.
 > Open the project in Xcode and select your own team under
